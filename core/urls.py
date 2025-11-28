@@ -25,24 +25,34 @@ urlpatterns = [
     # Trainee Management URLs (Requirements: 3.1-3.6)
     path('admin/trainees/', admin_views.trainee_list, name='admin_trainees'),
     path('admin/trainees/partial/', admin_views.trainee_list_partial, name='admin_trainee_list_partial'),
+    path('admin/trainees/archived/', admin_views.archived_trainees_list, name='admin_archived_trainees'),
+    path('admin/trainees/archived/partial/', admin_views.archived_trainees_list_partial, name='admin_archived_trainees_partial'),
     path('admin/trainees/add/', admin_views.trainee_add, name='admin_trainee_add'),
     path('admin/trainees/<int:trainee_id>/edit/', admin_views.trainee_edit, name='admin_trainee_edit'),
     path('admin/trainees/<int:trainee_id>/delete/', admin_views.trainee_delete, name='admin_trainee_delete'),
+    path('admin/trainees/<int:trainee_id>/restore/', admin_views.trainee_restore, name='admin_trainee_restore'),
     
     # Event Management URLs (Requirements: 4.1-4.5)
     path('admin/events/', admin_views.event_list, name='admin_events'),
     path('admin/events/partial/', admin_views.event_list_partial, name='admin_event_list_partial'),
+    path('admin/events/archived/', admin_views.archived_events_list, name='admin_archived_events'),
+    path('admin/events/archived/partial/', admin_views.archived_events_list_partial, name='admin_archived_events_partial'),
     path('admin/events/add/', admin_views.event_add, name='admin_event_add'),
     path('admin/events/<int:event_id>/', admin_views.event_detail, name='admin_event_detail'),
     path('admin/events/<int:event_id>/edit/', admin_views.event_edit, name='admin_event_edit'),
-    path('admin/events/<int:event_id>/delete/', admin_views.event_delete, name='admin_event_delete'),
+    path('admin/events/<int:event_id>/archive/', admin_views.event_archive, name='admin_event_archive'),
+    path('admin/events/<int:event_id>/restore/', admin_views.event_restore, name='admin_event_restore'),
     path('admin/events/<int:event_id>/status/', admin_views.event_status_update, name='admin_event_status_update'),
     
     # Matchmaking Management URLs (Requirements: 5.1-5.6)
     path('admin/matchmaking/', admin_views.matchmaking_list, name='admin_matchmaking'),
     path('admin/matchmaking/partial/', admin_views.matchmaking_list_partial, name='admin_matchmaking_list_partial'),
+    path('admin/matchmaking/archived/', admin_views.archived_matchmaking_list, name='admin_archived_matchmaking'),
+    path('admin/matchmaking/archived/partial/', admin_views.archived_matchmaking_list_partial, name='admin_archived_matchmaking_partial'),
     path('admin/matchmaking/add/', admin_views.match_add, name='admin_match_add'),
     path('admin/matchmaking/<int:match_id>/edit/', admin_views.match_edit, name='admin_match_edit'),
+    path('admin/matchmaking/<int:match_id>/archive/', admin_views.match_archive, name='admin_match_archive'),
+    path('admin/matchmaking/<int:match_id>/restore/', admin_views.match_restore, name='admin_match_restore'),
     path('admin/matchmaking/<int:match_id>/delete/', admin_views.match_delete, name='admin_match_delete'),
     path('admin/matchmaking/auto/', admin_views.auto_matchmaking, name='admin_auto_matchmaking'),
     path('admin/matchmaking/auto/confirm/', admin_views.auto_matchmaking_confirm, name='admin_auto_matchmaking_confirm'),
@@ -50,9 +60,13 @@ urlpatterns = [
     # Payment Management URLs (Requirements: 6.1-6.5)
     path('admin/payments/', admin_views.payment_list, name='admin_payments'),
     path('admin/payments/partial/', admin_views.payment_list_partial, name='admin_payment_list_partial'),
+    path('admin/payments/archived/', admin_views.archived_payments_list, name='admin_archived_payments'),
+    path('admin/payments/archived/partial/', admin_views.archived_payments_list_partial, name='admin_archived_payments_partial'),
     path('admin/payments/add/', admin_views.payment_add, name='admin_payment_add'),
     path('admin/payments/<int:payment_id>/edit/', admin_views.payment_edit, name='admin_payment_edit'),
     path('admin/payments/<int:payment_id>/delete/', admin_views.payment_delete, name='admin_payment_delete'),
+    path('admin/payments/<int:payment_id>/archive/', admin_views.payment_archive, name='admin_payment_archive'),
+    path('admin/payments/<int:payment_id>/restore/', admin_views.payment_restore, name='admin_payment_restore'),
     path('admin/payments/<int:payment_id>/complete/', admin_views.payment_mark_completed, name='admin_payment_complete'),
     
     # Reports URLs (Requirements: 7.1-7.4)
@@ -64,6 +78,14 @@ urlpatterns = [
     path('admin/belt-promotion/partial/', admin_views.belt_rank_promotion_list_partial, name='admin_belt_promotion_list_partial'),
     path('admin/belt-promotion/<int:trainee_id>/promote/', admin_views.belt_rank_promote, name='admin_belt_rank_promote'),
     path('admin/belt-promotion/history/', admin_views.belt_rank_promotion_history, name='admin_belt_promotion_history'),
+    
+    # Evaluation URLs
+    path('admin/evaluations/', admin_views.evaluation_list, name='admin_evaluations'),
+    path('admin/evaluations/partial/', admin_views.evaluation_list_partial, name='admin_evaluation_list_partial'),
+    path('admin/evaluations/add/', admin_views.evaluation_add, name='admin_evaluation_add'),
+    path('admin/evaluations/<int:evaluation_id>/edit/', admin_views.evaluation_edit, name='admin_evaluation_edit'),
+    path('admin/evaluations/<int:evaluation_id>/delete/', admin_views.evaluation_delete, name='admin_evaluation_delete'),
+    path('admin/evaluations/<int:trainee_id>/trainee/', admin_views.trainee_evaluations, name='admin_trainee_evaluations'),
     
     # Trainee URLs (Requirements: 8.1-8.3, 9.1-9.4, 10.1-10.3, 11.1-11.3)
     path('trainee/dashboard/', trainee_views.dashboard_view, name='trainee_dashboard'),

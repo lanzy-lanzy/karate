@@ -184,22 +184,12 @@ def result_entry(request, match_id):
         return redirect('judge_results')
     
     if request.method == 'POST':
-        winner_id = request.POST.get('winner', '').strip()
         competitor1_score = request.POST.get('competitor1_score', '0').strip()
         competitor2_score = request.POST.get('competitor2_score', '0').strip()
         notes = request.POST.get('notes', '').strip()
         
         # Validation
         errors = {}
-        if not winner_id:
-            errors['winner'] = 'Please select a winner'
-        else:
-            try:
-                winner_id = int(winner_id)
-                if winner_id not in [match.competitor1.id, match.competitor2.id]:
-                    errors['winner'] = 'Invalid winner selection'
-            except ValueError:
-                errors['winner'] = 'Invalid winner selection'
         
         try:
             competitor1_score = int(competitor1_score)
@@ -215,13 +205,17 @@ def result_entry(request, match_id):
         except ValueError:
             errors['competitor2_score'] = 'Invalid score'
         
+        # Check if scores are equal
+        if isinstance(competitor1_score, int) and isinstance(competitor2_score, int):
+            if competitor1_score == competitor2_score:
+                errors['scores'] = 'Scores cannot be equal. There must be a clear winner.'
+        
         if errors:
             context = {
                 'judge': judge,
                 'match': match,
                 'errors': errors,
                 'form_data': {
-                    'winner': winner_id if isinstance(winner_id, int) else '',
                     'competitor1_score': competitor1_score if isinstance(competitor1_score, int) else 0,
                     'competitor2_score': competitor2_score if isinstance(competitor2_score, int) else 0,
                     'notes': notes,
@@ -229,9 +223,14 @@ def result_entry(request, match_id):
             }
             return render(request, 'judge/result_form.html', context)
         
-        # Create or update result
+        # Determine winner automatically based on scores
         from core.models import Trainee
-        winner = get_object_or_404(Trainee, id=winner_id)
+        if competitor1_score > competitor2_score:
+            winner = match.competitor1
+            winner_id = match.competitor1.id
+        else:
+            winner = match.competitor2
+            winner_id = match.competitor2.id
         
         if existing_result:
             # Update existing (only if not locked)
@@ -268,7 +267,6 @@ def result_entry(request, match_id):
         'match': match,
         'errors': {},
         'form_data': {
-            'winner': '',
             'competitor1_score': 0,
             'competitor2_score': 0,
             'notes': '',

@@ -1,4 +1,4 @@
-<!-- Matchmaking List Partial - for HTMX updates -->
+<!-- Archived Matchmaking List Partial - for HTMX updates -->
 {% if events_with_matches %}
 <div class="space-y-6">
     {% for item in events_with_matches %}
@@ -78,25 +78,17 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div class="flex items-center justify-end space-x-2">
-                                <a href="{% url 'admin_match_edit' match.id %}" 
-                                   class="p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-500 hover:bg-opacity-10 rounded-lg transition-all inline-flex items-center justify-center"
-                                   title="Edit">
+                            <form method="POST" action="{% url 'admin_match_restore' match.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" 
+                                        class="p-2 text-green-400 hover:text-green-300 hover:bg-green-500 hover:bg-opacity-10 rounded-lg transition-all inline-flex items-center justify-center"
+                                        onclick="if(!confirm('Restore this match?')) return false;"
+                                        title="Restore">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                    </svg>
-                                </a>
-                                <button hx-post="{% url 'admin_match_archive' match.id %}"
-                                        hx-target="#match-list"
-                                        hx-swap="innerHTML"
-                                        hx-confirm="Are you sure you want to archive this match?"
-                                        class="p-2 text-red-400 hover:text-red-300 hover:bg-red-500 hover:bg-opacity-10 rounded-lg transition-all inline-flex items-center justify-center"
-                                        title="Archive">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 8h6m-5.5 8.5h5M19 12a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                                     </svg>
                                 </button>
-                            </div>
+                            </form>
                         </td>
                     </tr>
                     {% endfor %}
@@ -144,30 +136,24 @@
                     {% endfor %}
                 </div>
                 <div class="flex items-center gap-2 pt-3 border-t border-gray-700">
-                    <a href="{% url 'admin_match_edit' match.id %}" 
-                       class="flex-1 text-center px-3 py-2 text-sm font-semibold text-blue-300 bg-blue-500 bg-opacity-10 rounded-lg hover:bg-opacity-20 transition-all inline-flex items-center justify-center">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                        </svg>
-                        Edit
-                    </a>
-                    <button hx-post="{% url 'admin_match_archive' match.id %}"
-                            hx-target="#match-list"
-                            hx-swap="innerHTML"
-                            hx-confirm="Are you sure you want to archive this match?"
-                            class="flex-1 text-center px-3 py-2 text-sm font-semibold text-red-300 bg-red-500 bg-opacity-10 rounded-lg hover:bg-opacity-20 transition-all">
-                        <svg class="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
-                        </svg>
-                        Archive
-                    </button>
+                    <form method="POST" action="{% url 'admin_match_restore' match.id %}" style="display: flex; width: 100%;">
+                        {% csrf_token %}
+                        <button type="submit" 
+                                class="flex-1 text-center px-3 py-2 text-sm font-semibold text-green-300 bg-green-500 bg-opacity-10 rounded-lg hover:bg-opacity-20 transition-all"
+                                onclick="if(!confirm('Restore this match?')) return false;">
+                            <svg class="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 8h6m-5.5 8.5h5M19 12a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                            Restore
+                        </button>
+                    </form>
                 </div>
             </div>
             {% endfor %}
         </div>
         {% else %}
         <div class="p-6 text-center text-gray-400">
-            <p class="text-sm">No matches scheduled for this event yet.</p>
+            <p class="text-sm">No archived matches for this event.</p>
         </div>
         {% endif %}
     </div>
@@ -178,23 +164,7 @@
     <svg class="mx-auto h-12 w-12 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
     </svg>
-    <h3 class="mt-2 text-sm font-semibold text-gray-300">No matches found</h3>
-    <p class="mt-1 text-sm text-gray-400">Get started by creating a new match or using auto-matchmaking.</p>
-    <div class="mt-6 flex flex-col sm:flex-row justify-center gap-3">
-        <a href="{% url 'admin_match_add' %}" 
-           class="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white btn-primary rounded-lg">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-            </svg>
-            Create Match
-        </a>
-        <a href="{% url 'admin_auto_matchmaking' %}" 
-           class="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg hover:shadow-lg hover:shadow-green-500/50 transition-all">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-            </svg>
-            Auto-Matchmaking
-        </a>
-    </div>
+    <h3 class="mt-4 text-lg font-medium text-gray-200">No Archived Matches</h3>
+    <p class="mt-1 text-sm text-gray-400">Archive matches to store them here.</p>
 </div>
 {% endif %}

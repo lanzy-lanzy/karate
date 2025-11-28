@@ -72,7 +72,14 @@ class Trainee(models.Model):
     emergency_contact = models.CharField(max_length=100)
     emergency_phone = models.CharField(max_length=20)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    archived = models.BooleanField(default=False)
     joined_date = models.DateField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['profile__user__first_name', 'profile__user__last_name']
+        indexes = [
+            models.Index(fields=['archived', '-joined_date']),
+        ]
     
     def __str__(self):
         return f"{self.profile.user.get_full_name() or self.profile.user.username} - {self.get_belt_rank_display()}"
@@ -146,10 +153,14 @@ class Event(models.Model):
     registration_deadline = models.DateField()
     max_participants = models.IntegerField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    archived = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
         ordering = ['-event_date']
+        indexes = [
+            models.Index(fields=['archived', '-event_date']),
+        ]
     
     def __str__(self):
         return f"{self.name} - {self.event_date}"
@@ -232,11 +243,15 @@ class Match(models.Model):
     scheduled_time = models.DateTimeField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled')
     notes = models.TextField(blank=True)
+    archived = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
         ordering = ['scheduled_time']
         verbose_name_plural = 'Matches'
+        indexes = [
+            models.Index(fields=['archived', 'scheduled_time']),
+        ]
     
     def __str__(self):
         return f"{self.competitor1} vs {self.competitor2} - {self.event.name}"
@@ -415,9 +430,13 @@ class Payment(models.Model):
     payment_date = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True)
+    archived = models.BooleanField(default=False)
     
     class Meta:
         ordering = ['-payment_date']
+        indexes = [
+            models.Index(fields=['archived', '-payment_date']),
+        ]
     
     def __str__(self):
         return f"{self.trainee} - ${self.amount} ({self.get_payment_type_display()})"
@@ -653,3 +672,69 @@ class Registration(models.Model):
     
     def __str__(self):
         return f"{self.first_name} {self.last_name} - {self.get_status_display()}"
+
+
+class TraineeEvaluation(models.Model):
+    """
+    TraineeEvaluation model for assessing trainee performance and progress.
+    """
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('archived', 'Archived'),
+    ]
+    
+    RATING_CHOICES = [
+        (1, 'Poor'),
+        (2, 'Fair'),
+        (3, 'Good'),
+        (4, 'Very Good'),
+        (5, 'Excellent'),
+    ]
+    
+    trainee = models.ForeignKey(Trainee, on_delete=models.CASCADE, related_name='evaluations')
+    evaluator = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='evaluations_given')
+    
+    # Evaluation criteria
+    technique = models.IntegerField(choices=RATING_CHOICES, default=3, help_text='Overall technique proficiency')
+    speed = models.IntegerField(choices=RATING_CHOICES, default=3, help_text='Speed and reaction time')
+    strength = models.IntegerField(choices=RATING_CHOICES, default=3, help_text='Physical strength')
+    flexibility = models.IntegerField(choices=RATING_CHOICES, default=3, help_text='Flexibility and range of motion')
+    discipline = models.IntegerField(choices=RATING_CHOICES, default=3, help_text='Discipline and focus')
+    spirit = models.IntegerField(choices=RATING_CHOICES, default=3, help_text='Fighting spirit and determination')
+    
+    # Overall assessment
+    overall_rating = models.IntegerField(choices=RATING_CHOICES, default=3, help_text='Overall performance rating')
+    comments = models.TextField(blank=True, help_text='Detailed comments and feedback')
+    strengths = models.TextField(blank=True, help_text='Key strengths to build upon')
+    areas_for_improvement = models.TextField(blank=True, help_text='Areas that need improvement')
+    recommendations = models.TextField(blank=True, help_text='Recommendations for training and development')
+    
+    # Status and timestamps
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    evaluated_at = models.DateTimeField(auto_now_add=True)
+    next_evaluation_date = models.DateField(null=True, blank=True, help_text='Recommended date for next evaluation')
+    archived = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['-evaluated_at']
+        indexes = [
+            models.Index(fields=['trainee', '-evaluated_at']),
+            models.Index(fields=['archived', '-evaluated_at']),
+        ]
+    
+    def __str__(self):
+        return f"Evaluation: {self.trainee} - {self.evaluated_at.strftime('%Y-%m-%d')}"
+    
+    @property
+    def average_rating(self):
+        """Calculate average rating from all criteria."""
+        ratings = [
+            self.technique,
+            self.speed,
+            self.strength,
+            self.flexibility,
+            self.discipline,
+            self.spirit,
+        ]
+        return sum(ratings) / len(ratings) if ratings else 0

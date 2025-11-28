@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 
-{% block title %}Event Management - BlackCobra Karate Club{% endblock %}
+{% block title %}Archived Events - BlackCobra Karate Club{% endblock %}
 
-{% block page_title %}Event Management{% endblock %}
+{% block page_title %}Archived Events{% endblock %}
 
 {% block content %}
 <style>
@@ -54,26 +54,24 @@
         color: #fff;
     }
 
-    .create-btn {
-        background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
-        color: white;
-        padding: 0.875rem 1.5rem;
-        border-radius: 12px;
-        font-weight: 700;
-        font-size: 0.95rem;
-        transition: all 0.3s ease;
+    .back-btn {
+        background: rgba(255, 255, 255, 0.1);
+        color: #e5e7eb;
+        padding: 0.75rem 1.25rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-decoration: none;
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
-        border: none;
-        cursor: pointer;
-        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
-        text-decoration: none;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
     }
 
-    .create-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 25px rgba(239, 68, 68, 0.5);
+    .back-btn:hover {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 255, 255, 0.2);
     }
 
     .search-icon {
@@ -93,29 +91,21 @@
 </style>
 
 <div class="admin-events-container">
-    <!-- Header with Add Button -->
+    <!-- Header with Back Button -->
     <div style="display: flex; flex-direction: column; gap: 1.5rem; margin-bottom: 2rem;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
             <div>
                 <h1 class="gradient-text" style="font-size: 2.25rem; font-weight: 800; margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.75rem;">
-                    <span style="font-size: 2.25rem;">🏆</span> Event Management
+                    <span style="font-size: 2.25rem;">📦</span> Archived Events
                 </h1>
-                <p style="font-size: 1rem; color: #9ca3af; margin: 0;">Manage competitions and tournaments</p>
+                <p style="font-size: 1rem; color: #9ca3af; margin: 0;">View and manage archived competitions and tournaments</p>
             </div>
-            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                <a href="{% url 'admin_archived_events' %}" style="background: rgba(156, 163, 175, 0.15); color: #d1d5db; padding: 0.875rem 1.5rem; border-radius: 12px; font-weight: 700; font-size: 0.95rem; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 0.5rem; border: 1px solid rgba(156, 163, 175, 0.2); cursor: pointer; text-decoration: none;">
-                    <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
-                    </svg>
-                    Archived
-                </a>
-                <a href="{% url 'admin_event_add' %}" class="create-btn">
-                    <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                    </svg>
-                    Create Event
-                </a>
-            </div>
+            <a href="{% url 'admin_events' %}" class="back-btn">
+                <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Back to Events
+            </a>
         </div>
 
         <!-- Search and Filter Bar -->
@@ -132,7 +122,7 @@
                            placeholder="Search by name or location..."
                            class="search-input"
                            style="width: 100%; padding-left: 3rem;"
-                           hx-get="{% url 'admin_event_list_partial' %}"
+                           hx-get="{% url 'admin_archived_events_partial' %}"
                            hx-trigger="keyup changed delay:300ms, search"
                            hx-target="#event-list"
                            hx-swap="innerHTML"
@@ -144,7 +134,7 @@
                     <select name="status_filter"
                             class="filter-select"
                             style="width: 100%;"
-                            hx-get="{% url 'admin_event_list_partial' %}"
+                            hx-get="{% url 'admin_archived_events_partial' %}"
                             hx-trigger="change"
                             hx-target="#event-list"
                             hx-swap="innerHTML"
@@ -164,7 +154,7 @@
 
     <!-- Event List -->
     <div id="event-list">
-        {% include "admin/events/list_partial.html" %}
+        {% include "admin/events/archived_partial.html" %}
     </div>
 </div>
 {% endblock %}

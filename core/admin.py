@@ -14,6 +14,7 @@ from core.models import (
     BeltRankProgress,
     Leaderboard,
     Notification,
+    TraineeEvaluation,
 )
 
 
@@ -129,3 +130,25 @@ class NotificationAdmin(admin.ModelAdmin):
         updated = queryset.update(is_read=False, read_at=None)
         self.message_user(request, f'{updated} notification(s) marked as unread.')
     mark_as_unread.short_description = "Mark selected notifications as unread"
+
+
+@admin.register(TraineeEvaluation)
+class TraineeEvaluationAdmin(admin.ModelAdmin):
+    list_display = ('trainee', 'overall_rating', 'status', 'evaluated_at', 'evaluator')
+    list_filter = ('status', 'overall_rating', 'evaluated_at', 'archived')
+    search_fields = ('trainee__profile__user__username', 'trainee__profile__user__email')
+    readonly_fields = ('evaluated_at',)
+    fieldsets = (
+        ('Trainee Information', {
+            'fields': ('trainee', 'evaluator'),
+        }),
+        ('Evaluation Ratings', {
+            'fields': ('technique', 'speed', 'strength', 'flexibility', 'discipline', 'spirit', 'overall_rating'),
+        }),
+        ('Detailed Assessment', {
+            'fields': ('comments', 'strengths', 'areas_for_improvement', 'recommendations'),
+        }),
+        ('Status & Dates', {
+            'fields': ('status', 'evaluated_at', 'next_evaluation_date', 'archived'),
+        }),
+    )

@@ -1,33 +1,24 @@
 {% extends "base.html" %}
 
-{% block title %}Payment Management - BlackCobra Karate Club{% endblock %}
+{% block title %}Archived Payments - BlackCobra Karate Club{% endblock %}
 
-{% block page_title %}Payment Management{% endblock %}
+{% block page_title %}Archived Payments{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
-    <!-- Header with Add Button -->
+    <!-- Header with Back Button -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h2 class="text-4xl font-bold gradient-text">All Payments</h2>
-            <p class="text-sm text-gray-400 mt-2">Track and manage club payments</p>
+            <h2 class="text-4xl font-bold gradient-text">Archived Payments</h2>
+            <p class="text-sm text-gray-400 mt-2">View and manage archived payment records</p>
         </div>
-        <div class="flex gap-4">
-            <a href="{% url 'admin_archived_payments' %}" 
-               class="inline-flex items-center justify-center px-8 py-3 text-sm font-semibold text-amber-300 bg-amber-500 bg-opacity-10 rounded-lg hover:bg-opacity-20 transition-colors">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"></path>
-                </svg>
-                Archived
-            </a>
-            <a href="{% url 'admin_payment_add' %}" 
-               class="inline-flex items-center justify-center px-8 py-3 text-sm font-semibold text-white btn-primary rounded-lg">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                </svg>
-                Record Payment
-            </a>
-        </div>
+        <a href="{% url 'admin_payments' %}" 
+           class="inline-flex items-center justify-center px-8 py-3 text-sm font-semibold text-white btn-primary rounded-lg">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            Back to Payments
+        </a>
     </div>
 
     <!-- Search and Filter Bar -->
@@ -41,7 +32,7 @@
                            id="payment-search"
                            placeholder="Search by trainee name..."
                            class="w-full pl-12 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400 transition-colors"
-                           hx-get="{% url 'admin_payment_list_partial' %}"
+                           hx-get="{% url 'admin_archived_payments_partial' %}"
                            hx-trigger="keyup changed delay:300ms, search"
                            hx-target="#payment-list"
                            hx-swap="innerHTML"
@@ -64,7 +55,7 @@
             <div class="sm:w-40">
                 <select name="status_filter"
                         class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400 transition-colors"
-                        hx-get="{% url 'admin_payment_list_partial' %}"
+                        hx-get="{% url 'admin_archived_payments_partial' %}"
                         hx-trigger="change"
                         hx-target="#payment-list"
                         hx-swap="innerHTML"
@@ -81,7 +72,7 @@
             <div class="sm:w-40">
                 <select name="type_filter"
                         class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400 transition-colors"
-                        hx-get="{% url 'admin_payment_list_partial' %}"
+                        hx-get="{% url 'admin_archived_payments_partial' %}"
                         hx-trigger="change"
                         hx-target="#payment-list"
                         hx-swap="innerHTML"
@@ -98,7 +89,7 @@
 
     <!-- Payment List -->
     <div id="payment-list">
-        {% include "admin/payments/list_partial.html" %}
+        {% include "admin/payments/archived_list_partial.html" %}
     </div>
 </div>
 {% endblock %}

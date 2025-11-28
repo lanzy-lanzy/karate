@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="BlackCobra Karate Club Management System">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <title>{% block title %}BlackCobra Karate Club{% endblock %}</title>
     
     <!-- TailwindCSS CDN -->
@@ -11,6 +12,13 @@
     
     <!-- HTMX CDN -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- HTMX CSRF Configuration -->
+    <script>
+        document.addEventListener('htmx:configRequest', function(evt) {
+            evt.detail.headers['X-CSRFToken'] = document.querySelector('meta[name="csrf-token"]').content;
+        });
+    </script>
     
     <!-- AlpineJS CDN -->
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>

@@ -1,5 +1,5 @@
 {% comment %}
-Trainee List Partial - Used for HTMX updates
+Archived Trainee List Partial - Used for HTMX updates
 {% endcomment %}
 
 <style>
@@ -19,32 +19,21 @@ Trainee List Partial - Used for HTMX updates
         white-space: nowrap;
     }
 
-    .btn-edit {
-        background: rgba(139, 92, 246, 0.15);
-        color: #a78bfa;
-        border: 1px solid rgba(139, 92, 246, 0.2);
+    .btn-restore {
+        background: rgba(16, 185, 129, 0.15);
+        color: #6ee7b7;
+        border: 1px solid rgba(16, 185, 129, 0.2);
     }
 
-    .btn-edit:hover {
-        background: rgba(139, 92, 246, 0.25);
-        border-color: rgba(139, 92, 246, 0.4);
-    }
-
-    .btn-archive {
-        background: rgba(239, 68, 68, 0.15);
-        color: #f87171;
-        border: 1px solid rgba(239, 68, 68, 0.2);
-    }
-
-    .btn-archive:hover {
-        background: rgba(239, 68, 68, 0.25);
-        border-color: rgba(239, 68, 68, 0.4);
+    .btn-restore:hover {
+        background: rgba(16, 185, 129, 0.25);
+        border-color: rgba(16, 185, 129, 0.4);
     }
 </style>
 
 <!-- Results Count -->
 <div class="mb-4 text-sm text-gray-400">
-    Showing <span class="text-red-400 font-semibold">{{ trainees|length }}</span> trainee{{ trainees|length|pluralize }}
+    Showing <span class="text-red-400 font-semibold">{{ trainees|length }}</span> archived trainee{{ trainees|length|pluralize }}
 </div>
 
 <!-- Desktop Table View -->
@@ -63,14 +52,14 @@ Trainee List Partial - Used for HTMX updates
             </thead>
             <tbody class="divide-y divide-gray-700">
                 {% for trainee in trainees %}
-                <tr class="hover:bg-gray-750 transition-colors">
+                <tr class="hover:bg-gray-750 transition-colors opacity-75">
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex items-center">
                             <div class="flex-shrink-0 h-10 w-10">
                                 {% if trainee.profile.profile_image %}
                                 <img class="h-10 w-10 rounded-full object-cover" src="{{ trainee.profile.profile_image.url }}" alt="">
                                 {% else %}
-                                <div class="h-10 w-10 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center">
+                                <div class="h-10 w-10 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center opacity-50">
                                     <span class="text-white font-semibold text-sm">
                                         {{ trainee.profile.user.first_name|slice:":1"|upper }}{{ trainee.profile.user.last_name|slice:":1"|upper }}
                                     </span>
@@ -117,17 +106,13 @@ Trainee List Partial - Used for HTMX updates
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div class="flex items-center justify-end space-x-2">
-                            <a href="{% url 'admin_trainee_edit' trainee.id %}" 
-                               class="action-btn btn-edit">
-                                Edit
-                            </a>
                             <button type="button"
-                                    hx-post="{% url 'admin_trainee_delete' trainee.id %}"
+                                    hx-post="{% url 'admin_trainee_restore' trainee.id %}"
                                     hx-target="#trainee-list"
                                     hx-swap="innerHTML"
-                                    hx-confirm="Are you sure you want to archive {{ trainee.profile.user.get_full_name|default:trainee.profile.user.username }}?"
-                                    class="action-btn btn-archive">
-                                Archive
+                                    hx-confirm="Are you sure you want to restore {{ trainee.profile.user.get_full_name|default:trainee.profile.user.username }}?"
+                                    class="action-btn btn-restore">
+                                Restore
                             </button>
                         </div>
                     </td>
@@ -138,15 +123,15 @@ Trainee List Partial - Used for HTMX updates
                         <svg class="mx-auto h-12 w-12 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
                         </svg>
-                        <h3 class="mt-2 text-sm font-semibold text-gray-300">No trainees found</h3>
-                        <p class="mt-1 text-sm text-gray-400">Get started by adding a new trainee.</p>
+                        <h3 class="mt-2 text-sm font-semibold text-gray-300">No archived trainees</h3>
+                        <p class="mt-1 text-sm text-gray-400">All trainees are currently active.</p>
                         <div class="mt-6">
-                            <a href="{% url 'admin_trainee_add' %}" 
+                            <a href="{% url 'admin_trainees' %}" 
                                class="inline-flex items-center px-4 py-2 text-sm font-semibold text-white btn-primary rounded-lg">
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                                 </svg>
-                                Add Trainee
+                                Back to Trainees
                             </a>
                         </div>
                     </td>
@@ -160,14 +145,14 @@ Trainee List Partial - Used for HTMX updates
 <!-- Mobile Card View -->
 <div class="md:hidden space-y-4">
     {% for trainee in trainees %}
-    <div class="bg-gray-800 rounded-2xl border border-gray-700 p-5 feature-card">
+    <div class="bg-gray-800 rounded-2xl border border-gray-700 p-5 feature-card opacity-75">
         <div class="flex items-start justify-between mb-4">
             <div class="flex items-center">
                 <div class="flex-shrink-0 h-12 w-12">
                     {% if trainee.profile.profile_image %}
                     <img class="h-12 w-12 rounded-full object-cover" src="{{ trainee.profile.profile_image.url }}" alt="">
                     {% else %}
-                    <div class="h-12 w-12 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center">
+                    <div class="h-12 w-12 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center opacity-50">
                         <span class="text-white font-semibold">
                             {{ trainee.profile.user.first_name|slice:":1"|upper }}{{ trainee.profile.user.last_name|slice:":1"|upper }}
                         </span>
@@ -216,17 +201,13 @@ Trainee List Partial - Used for HTMX updates
         </div>
         
         <div class="flex justify-end gap-2">
-            <a href="{% url 'admin_trainee_edit' trainee.id %}" 
-               class="action-btn btn-edit">
-                Edit
-            </a>
             <button type="button"
-                    hx-post="{% url 'admin_trainee_delete' trainee.id %}"
+                    hx-post="{% url 'admin_trainee_restore' trainee.id %}"
                     hx-target="#trainee-list"
                     hx-swap="innerHTML"
-                    hx-confirm="Are you sure you want to archive {{ trainee.profile.user.get_full_name|default:trainee.profile.user.username }}?"
-                    class="action-btn btn-archive">
-                Archive
+                    hx-confirm="Are you sure you want to restore {{ trainee.profile.user.get_full_name|default:trainee.profile.user.username }}?"
+                    class="action-btn btn-restore">
+                Restore
             </button>
         </div>
     </div>
@@ -235,15 +216,15 @@ Trainee List Partial - Used for HTMX updates
         <svg class="mx-auto h-12 w-12 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
         </svg>
-        <h3 class="mt-2 text-sm font-semibold text-gray-300">No trainees found</h3>
-        <p class="mt-1 text-sm text-gray-400">Get started by adding a new trainee.</p>
+        <h3 class="mt-2 text-sm font-semibold text-gray-300">No archived trainees</h3>
+        <p class="mt-1 text-sm text-gray-400">All trainees are currently active.</p>
         <div class="mt-6">
-            <a href="{% url 'admin_trainee_add' %}" 
+            <a href="{% url 'admin_trainees' %}" 
                class="inline-flex items-center px-4 py-2 text-sm font-semibold text-white btn-primary rounded-lg">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                 </svg>
-                Add Trainee
+                Back to Trainees
             </a>
         </div>
     </div>

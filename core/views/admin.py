@@ -196,7 +196,7 @@ def trainee_list(request):
     Trainee list view with search and filter functionality.
     Requirements: 3.1, 3.6
     """
-    trainees = Trainee.objects.select_related('profile__user').all()
+    trainees = Trainee.objects.select_related('profile__user').filter(archived=False)
     
     # Apply search filter
     search = request.GET.get('search', '').strip()
@@ -237,7 +237,7 @@ def trainee_list_partial(request):
     Partial view for HTMX trainee list updates.
     Requirements: 3.6
     """
-    trainees = Trainee.objects.select_related('profile__user').all()
+    trainees = Trainee.objects.select_related('profile__user').filter(archived=False)
     
     # Apply search filter
     search = request.GET.get('search', '').strip()
@@ -485,35 +485,145 @@ def trainee_edit(request, trainee_id):
 @admin_required
 def trainee_delete(request, trainee_id):
     """
-    Delete trainee view.
+    Archive trainee view (soft delete).
     Requirements: 3.5
     """
-    trainee = get_object_or_404(Trainee.objects.select_related('profile__user'), id=trainee_id)
+    trainee = get_object_or_404(Trainee.objects.select_related('profile__user'), id=trainee_id, archived=False)
     
     if request.method == 'DELETE' or request.method == 'POST':
         user = trainee.profile.user
         trainee_name = user.get_full_name() or user.username
         
-        # Delete trainee (cascade will handle profile)
-        trainee.delete()
-        trainee.profile.delete()
-        user.delete()
+        # Archive trainee instead of deleting
+        trainee.archived = True
+        trainee.save()
         
         # For HTMX requests, return updated list
         if request.headers.get('HX-Request'):
-            trainees = Trainee.objects.select_related('profile__user').order_by(
+            trainees = Trainee.objects.select_related('profile__user').filter(archived=False).order_by(
                 'profile__user__first_name', 'profile__user__last_name'
             )
             response = render(request, 'admin/trainees/list_partial.html', {'trainees': trainees})
             response['HX-Trigger'] = json.dumps({
-                'showToast': {'message': f'Trainee {trainee_name} has been deleted.', 'type': 'success'}
+                'showToast': {'message': f'Trainee {trainee_name} has been archived.', 'type': 'success'}
             })
             return response
         
-        messages.success(request, f'Trainee {trainee_name} has been deleted.')
+        messages.success(request, f'Trainee {trainee_name} has been archived.')
         return redirect('admin_trainees')
     
     return redirect('admin_trainees')
+
+
+@admin_required
+def archived_trainees_list(request):
+    """
+    Archived trainees list view with search and filter functionality.
+    Requirements: 3.1
+    """
+    trainees = Trainee.objects.select_related('profile__user').filter(archived=True)
+    
+    # Apply search filter
+    search = request.GET.get('search', '').strip()
+    if search:
+        trainees = trainees.filter(
+            Q(profile__user__first_name__icontains=search) |
+            Q(profile__user__last_name__icontains=search) |
+            Q(profile__user__username__icontains=search) |
+            Q(belt_rank__icontains=search) |
+            Q(status__icontains=search)
+        )
+    
+    # Apply status filter
+    status_filter = request.GET.get('status_filter', '').strip()
+    if status_filter:
+        trainees = trainees.filter(status=status_filter)
+    
+    # Apply belt filter
+    belt_filter = request.GET.get('belt_filter', '').strip()
+    if belt_filter:
+        trainees = trainees.filter(belt_rank=belt_filter)
+    
+    # Order by name
+    trainees = trainees.order_by('profile__user__first_name', 'profile__user__last_name')
+    
+    context = {'trainees': trainees}
+    
+    # Return partial for HTMX requests
+    if request.headers.get('HX-Request'):
+        return render(request, 'admin/trainees/archived_partial.html', context)
+    
+    return render(request, 'admin/trainees/archived.html', context)
+
+
+@admin_required
+def archived_trainees_list_partial(request):
+    """
+    Partial view for HTMX archived trainees list updates.
+    Requirements: 3.6
+    """
+    trainees = Trainee.objects.select_related('profile__user').filter(archived=True)
+    
+    # Apply search filter
+    search = request.GET.get('search', '').strip()
+    if search:
+        trainees = trainees.filter(
+            Q(profile__user__first_name__icontains=search) |
+            Q(profile__user__last_name__icontains=search) |
+            Q(profile__user__username__icontains=search) |
+            Q(belt_rank__icontains=search) |
+            Q(status__icontains=search)
+        )
+    
+    # Apply status filter
+    status_filter = request.GET.get('status_filter', '').strip()
+    if status_filter:
+        trainees = trainees.filter(status=status_filter)
+    
+    # Apply belt filter
+    belt_filter = request.GET.get('belt_filter', '').strip()
+    if belt_filter:
+        trainees = trainees.filter(belt_rank=belt_filter)
+    
+    # Order by name
+    trainees = trainees.order_by('profile__user__first_name', 'profile__user__last_name')
+    
+    from django.middleware.csrf import get_token
+    csrf_token = get_token(request)
+    
+    return render(request, 'admin/trainees/archived_partial.html', {'trainees': trainees, 'csrf_token': csrf_token})
+
+
+@admin_required
+def trainee_restore(request, trainee_id):
+    """
+    Restore archived trainee view.
+    Requirements: 3.5
+    """
+    trainee = get_object_or_404(Trainee.objects.select_related('profile__user'), id=trainee_id, archived=True)
+    
+    if request.method == 'POST':
+        user = trainee.profile.user
+        trainee_name = user.get_full_name() or user.username
+        trainee.archived = False
+        trainee.save()
+        
+        if request.headers.get('HX-Request'):
+            from django.middleware.csrf import get_token
+            csrf_token = get_token(request)
+            trainees = Trainee.objects.select_related('profile__user').filter(archived=True).order_by(
+                'profile__user__first_name', 'profile__user__last_name'
+            )
+            response = render(request, 'admin/trainees/archived_partial.html', {'trainees': trainees, 'csrf_token': csrf_token})
+            response['HX-Trigger'] = json.dumps({
+                'showToast': {'message': f'Trainee {trainee_name} has been restored.', 'type': 'success'}
+            })
+            return response
+        
+        messages.success(request, f'Trainee {trainee_name} has been restored.')
+        return redirect('admin_archived_trainees')
+    
+    return redirect('admin_archived_trainees')
 
 
 # Event Management Views
@@ -525,7 +635,7 @@ def event_list(request):
     Event list view with search and filter functionality.
     Requirements: 4.1
     """
-    events = Event.objects.all()
+    events = Event.objects.filter(archived=False)
     
     # Apply search filter
     search = request.GET.get('search', '').strip()
@@ -558,7 +668,7 @@ def event_list_partial(request):
     Partial view for HTMX event list updates.
     Requirements: 4.1
     """
-    events = Event.objects.all()
+    events = Event.objects.filter(archived=False)
     
     # Apply search filter
     search = request.GET.get('search', '').strip()
@@ -576,7 +686,10 @@ def event_list_partial(request):
     # Order by event date
     events = events.order_by('-event_date')
     
-    return render(request, 'admin/events/list_partial.html', {'events': events})
+    from django.middleware.csrf import get_token
+    csrf_token = get_token(request)
+    
+    return render(request, 'admin/events/list_partial.html', {'events': events, 'csrf_token': csrf_token})
 
 
 @admin_required
@@ -766,29 +879,124 @@ def event_edit(request, event_id):
 
 
 @admin_required
-def event_delete(request, event_id):
+def event_archive(request, event_id):
     """
-    Delete event view.
+    Archive event view.
     Requirements: 4.3
     """
     event = get_object_or_404(Event, id=event_id)
     
-    if request.method == 'DELETE' or request.method == 'POST':
+    if request.method == 'POST':
         event_name = event.name
-        event.delete()
+        event.archived = True
+        event.save()
         
         if request.headers.get('HX-Request'):
-            events = Event.objects.all().order_by('-event_date')
-            response = render(request, 'admin/events/list_partial.html', {'events': events})
+            from django.middleware.csrf import get_token
+            csrf_token = get_token(request)
+            events = Event.objects.filter(archived=False).order_by('-event_date')
+            response = render(request, 'admin/events/list_partial.html', {'events': events, 'csrf_token': csrf_token})
             response['HX-Trigger'] = json.dumps({
-                'showToast': {'message': f'Event "{event_name}" has been deleted.', 'type': 'success'}
+                'showToast': {'message': f'Event "{event_name}" has been archived.', 'type': 'success'}
             })
             return response
         
-        messages.success(request, f'Event "{event_name}" has been deleted.')
+        messages.success(request, f'Event "{event_name}" has been archived.')
         return redirect('admin_events')
     
     return redirect('admin_events')
+
+
+@admin_required
+def archived_events_list(request):
+    """
+    Archived events list view with search and filter functionality.
+    Requirements: 4.1
+    """
+    events = Event.objects.filter(archived=True)
+    
+    # Apply search filter
+    search = request.GET.get('search', '').strip()
+    if search:
+        events = events.filter(
+            Q(name__icontains=search) |
+            Q(location__icontains=search)
+        )
+    
+    # Apply status filter
+    status_filter = request.GET.get('status_filter', '').strip()
+    if status_filter:
+        events = events.filter(status=status_filter)
+    
+    # Order by event date (most recent first)
+    events = events.order_by('-event_date')
+    
+    context = {'events': events}
+    
+    # Return partial for HTMX requests
+    if request.headers.get('HX-Request'):
+        return render(request, 'admin/events/archived_partial.html', context)
+    
+    return render(request, 'admin/events/archived.html', context)
+
+
+@admin_required
+def archived_events_list_partial(request):
+    """
+    Partial view for HTMX archived events list updates.
+    Requirements: 4.1
+    """
+    events = Event.objects.filter(archived=True)
+    
+    # Apply search filter
+    search = request.GET.get('search', '').strip()
+    if search:
+        events = events.filter(
+            Q(name__icontains=search) |
+            Q(location__icontains=search)
+        )
+    
+    # Apply status filter
+    status_filter = request.GET.get('status_filter', '').strip()
+    if status_filter:
+        events = events.filter(status=status_filter)
+    
+    # Order by event date
+    events = events.order_by('-event_date')
+    
+    from django.middleware.csrf import get_token
+    csrf_token = get_token(request)
+    
+    return render(request, 'admin/events/archived_partial.html', {'events': events, 'csrf_token': csrf_token})
+
+
+@admin_required
+def event_restore(request, event_id):
+    """
+    Restore archived event view.
+    Requirements: 4.3
+    """
+    event = get_object_or_404(Event, id=event_id, archived=True)
+    
+    if request.method == 'POST':
+        event_name = event.name
+        event.archived = False
+        event.save()
+        
+        if request.headers.get('HX-Request'):
+            from django.middleware.csrf import get_token
+            csrf_token = get_token(request)
+            events = Event.objects.filter(archived=True).order_by('-event_date')
+            response = render(request, 'admin/events/archived_partial.html', {'events': events, 'csrf_token': csrf_token})
+            response['HX-Trigger'] = json.dumps({
+                'showToast': {'message': f'Event "{event_name}" has been restored.', 'type': 'success'}
+            })
+            return response
+        
+        messages.success(request, f'Event "{event_name}" has been restored.')
+        return redirect('admin_archived_events')
+    
+    return redirect('admin_archived_events')
 
 
 @admin_required
@@ -859,7 +1067,7 @@ def matchmaking_list(request):
     # Build event data with matches
     events_with_matches = []
     for event in events:
-        matches = event.matches.all()
+        matches = event.matches.filter(archived=False)
         if status_filter:
             matches = matches.filter(status=status_filter)
         matches = matches.order_by('scheduled_time')
@@ -910,7 +1118,7 @@ def matchmaking_list_partial(request):
     
     events_with_matches = []
     for event in events:
-        matches = event.matches.all()
+        matches = event.matches.filter(archived=False)
         if status_filter:
             matches = matches.filter(status=status_filter)
         matches = matches.order_by('scheduled_time')
@@ -1155,19 +1363,23 @@ def match_edit(request, match_id):
 
 
 @admin_required
-def match_delete(request, match_id):
+def match_archive(request, match_id):
     """
-    Delete match view.
+    Archive match view.
     Requirements: 5.2
     """
     from core.models import Match, Event
     
     match = get_object_or_404(Match, id=match_id)
     
-    if request.method == 'DELETE' or request.method == 'POST':
-        match.delete()
+    if request.method == 'POST':
+        match_name = f"{match.competitor1.profile.user.get_full_name()} vs {match.competitor2.profile.user.get_full_name()}"
+        match.archived = True
+        match.save()
         
         if request.headers.get('HX-Request'):
+            from django.middleware.csrf import get_token
+            csrf_token = get_token(request)
             # Rebuild the list
             events = Event.objects.prefetch_related(
                 'matches__competitor1__profile__user',
@@ -1177,22 +1389,172 @@ def match_delete(request, match_id):
             
             events_with_matches = []
             for event in events:
-                matches = event.matches.all().order_by('scheduled_time')
-                events_with_matches.append({
-                    'event': event,
-                    'matches': matches
-                })
+                matches = event.matches.filter(archived=False).order_by('scheduled_time')
+                if matches.exists():
+                    events_with_matches.append({
+                        'event': event,
+                        'matches': matches
+                    })
             
-            response = render(request, 'admin/matchmaking/list_partial.html', {'events_with_matches': events_with_matches})
+            response = render(request, 'admin/matchmaking/list_partial.html', {'events_with_matches': events_with_matches, 'csrf_token': csrf_token})
             response['HX-Trigger'] = json.dumps({
-                'showToast': {'message': 'Match has been deleted.', 'type': 'success'}
+                'showToast': {'message': f'Match "{match_name}" has been archived.', 'type': 'success'}
             })
             return response
         
-        messages.success(request, 'Match has been deleted.')
+        messages.success(request, f'Match "{match_name}" has been archived.')
         return redirect('admin_matchmaking')
     
     return redirect('admin_matchmaking')
+
+
+@admin_required
+def match_delete(request, match_id):
+    """
+    Delete match view (legacy).
+    Requirements: 5.2
+    """
+    # Redirect to archive instead
+    return match_archive(request, match_id)
+
+
+@admin_required
+def archived_matchmaking_list(request):
+    """
+    Archived matchmaking list view.
+    Requirements: 5.1
+    """
+    from core.models import Match, Event, Judge
+    
+    # Get all events with archived matches
+    events = Event.objects.prefetch_related(
+        'matches__competitor1__profile__user',
+        'matches__competitor2__profile__user',
+        'matches__judge_assignments__judge__profile__user'
+    ).order_by('-event_date')
+    
+    # Apply event filter
+    event_filter = request.GET.get('event_filter', '').strip()
+    if event_filter:
+        events = events.filter(id=event_filter)
+    
+    # Apply status filter
+    status_filter = request.GET.get('status_filter', '').strip()
+    
+    # Build event data with archived matches
+    events_with_matches = []
+    for event in events:
+        matches = event.matches.filter(archived=True)
+        if status_filter:
+            matches = matches.filter(status=status_filter)
+        matches = matches.order_by('scheduled_time')
+        
+        if matches.exists() or not event_filter:
+            events_with_matches.append({
+                'event': event,
+                'matches': matches
+            })
+    
+    # Get all events for filter dropdown
+    all_events = Event.objects.all().order_by('-event_date')
+    
+    context = {
+        'events_with_matches': events_with_matches,
+        'all_events': all_events,
+    }
+    
+    if request.headers.get('HX-Request'):
+        from django.middleware.csrf import get_token
+        csrf_token = get_token(request)
+        context['csrf_token'] = csrf_token
+        return render(request, 'admin/matchmaking/archived_partial.html', context)
+    
+    return render(request, 'admin/matchmaking/archived.html', context)
+
+
+@admin_required
+def archived_matchmaking_list_partial(request):
+    """
+    Partial view for HTMX archived matchmaking list updates.
+    Requirements: 5.1
+    """
+    from core.models import Match, Event, Judge
+    
+    events = Event.objects.prefetch_related(
+        'matches__competitor1__profile__user',
+        'matches__competitor2__profile__user',
+        'matches__judge_assignments__judge__profile__user'
+    ).order_by('-event_date')
+    
+    event_filter = request.GET.get('event_filter', '').strip()
+    if event_filter:
+        events = events.filter(id=event_filter)
+    
+    status_filter = request.GET.get('status_filter', '').strip()
+    
+    events_with_matches = []
+    for event in events:
+        matches = event.matches.filter(archived=True)
+        if status_filter:
+            matches = matches.filter(status=status_filter)
+        matches = matches.order_by('scheduled_time')
+        
+        if matches.exists() or not event_filter:
+            events_with_matches.append({
+                'event': event,
+                'matches': matches
+            })
+    
+    from django.middleware.csrf import get_token
+    csrf_token = get_token(request)
+    
+    return render(request, 'admin/matchmaking/archived_partial.html', {'events_with_matches': events_with_matches, 'csrf_token': csrf_token})
+
+
+@admin_required
+def match_restore(request, match_id):
+    """
+    Restore archived match view.
+    Requirements: 5.2
+    """
+    from core.models import Match, Event
+    
+    match = get_object_or_404(Match, id=match_id, archived=True)
+    
+    if request.method == 'POST':
+        match_name = f"{match.competitor1.profile.user.get_full_name()} vs {match.competitor2.profile.user.get_full_name()}"
+        match.archived = False
+        match.save()
+        
+        if request.headers.get('HX-Request'):
+            from django.middleware.csrf import get_token
+            csrf_token = get_token(request)
+            # Rebuild the list
+            events = Event.objects.prefetch_related(
+                'matches__competitor1__profile__user',
+                'matches__competitor2__profile__user',
+                'matches__judge_assignments__judge__profile__user'
+            ).order_by('-event_date')
+            
+            events_with_matches = []
+            for event in events:
+                matches = event.matches.filter(archived=True).order_by('scheduled_time')
+                if matches.exists():
+                    events_with_matches.append({
+                        'event': event,
+                        'matches': matches
+                    })
+            
+            response = render(request, 'admin/matchmaking/archived_partial.html', {'events_with_matches': events_with_matches, 'csrf_token': csrf_token})
+            response['HX-Trigger'] = json.dumps({
+                'showToast': {'message': f'Match "{match_name}" has been restored.', 'type': 'success'}
+            })
+            return response
+        
+        messages.success(request, f'Match "{match_name}" has been restored.')
+        return redirect('admin_archived_matchmaking')
+    
+    return redirect('admin_archived_matchmaking')
 
 
 @admin_required
@@ -1302,7 +1664,7 @@ def payment_list(request):
     """
     from core.models import Payment
     
-    payments = Payment.objects.select_related('trainee__profile__user').all()
+    payments = Payment.objects.select_related('trainee__profile__user').filter(archived=False)
     
     # Apply search filter
     search = request.GET.get('search', '').strip()
@@ -1343,7 +1705,7 @@ def payment_list_partial(request):
     """
     from core.models import Payment
     
-    payments = Payment.objects.select_related('trainee__profile__user').all()
+    payments = Payment.objects.select_related('trainee__profile__user').filter(archived=False)
     
     # Apply search filter
     search = request.GET.get('search', '').strip()
@@ -1580,6 +1942,138 @@ def payment_mark_completed(request, payment_id):
         messages.success(request, 'Payment marked as completed.')
     
     return redirect('admin_payments')
+
+
+@admin_required
+def archived_payments_list(request):
+    """
+    View archived payments with search and filter options.
+    Requirements: 6.1, 6.4
+    """
+    from core.models import Payment
+    
+    payments = Payment.objects.select_related('trainee__profile__user').filter(archived=True)
+    
+    # Apply search filter
+    search = request.GET.get('search', '').strip()
+    if search:
+        payments = payments.filter(
+            Q(trainee__profile__user__first_name__icontains=search) |
+            Q(trainee__profile__user__last_name__icontains=search) |
+            Q(trainee__profile__user__username__icontains=search)
+        )
+    
+    # Apply status filter
+    status_filter = request.GET.get('status_filter', '').strip()
+    if status_filter:
+        payments = payments.filter(status=status_filter)
+    
+    # Apply type filter
+    type_filter = request.GET.get('type_filter', '').strip()
+    if type_filter:
+        payments = payments.filter(payment_type=type_filter)
+    
+    # Order by payment date (most recent first)
+    payments = payments.order_by('-payment_date')
+    
+    context = {'payments': payments}
+    
+    # Return partial for HTMX requests
+    if request.headers.get('HX-Request'):
+        return render(request, 'admin/payments/archived_list_partial.html', context)
+    
+    return render(request, 'admin/payments/archived_list.html', context)
+
+
+@admin_required
+def archived_payments_list_partial(request):
+    """
+    Partial view for HTMX archived payment list updates.
+    Requirements: 6.1, 6.4
+    """
+    from core.models import Payment
+    
+    payments = Payment.objects.select_related('trainee__profile__user').filter(archived=True)
+    
+    # Apply search filter
+    search = request.GET.get('search', '').strip()
+    if search:
+        payments = payments.filter(
+            Q(trainee__profile__user__first_name__icontains=search) |
+            Q(trainee__profile__user__last_name__icontains=search) |
+            Q(trainee__profile__user__username__icontains=search)
+        )
+    
+    # Apply status filter
+    status_filter = request.GET.get('status_filter', '').strip()
+    if status_filter:
+        payments = payments.filter(status=status_filter)
+    
+    # Apply type filter
+    type_filter = request.GET.get('type_filter', '').strip()
+    if type_filter:
+        payments = payments.filter(payment_type=type_filter)
+    
+    # Order by payment date
+    payments = payments.order_by('-payment_date')
+    
+    return render(request, 'admin/payments/archived_list_partial.html', {'payments': payments})
+
+
+@admin_required
+def payment_archive(request, payment_id):
+    """
+    Archive a payment (soft delete).
+    Requirements: 6.1
+    """
+    from core.models import Payment
+    
+    payment = get_object_or_404(Payment, id=payment_id)
+    
+    if request.method == 'POST':
+        payment.archived = True
+        payment.save()
+        
+        if request.headers.get('HX-Request'):
+            payments = Payment.objects.select_related('trainee__profile__user').filter(archived=False).order_by('-payment_date')
+            response = render(request, 'admin/payments/list_partial.html', {'payments': payments})
+            response['HX-Trigger'] = json.dumps({
+                'showToast': {'message': 'Payment has been archived.', 'type': 'success'}
+            })
+            return response
+        
+        messages.success(request, 'Payment has been archived.')
+        return redirect('admin_payments')
+    
+    return redirect('admin_payments')
+
+
+@admin_required
+def payment_restore(request, payment_id):
+    """
+    Restore an archived payment.
+    Requirements: 6.1
+    """
+    from core.models import Payment
+    
+    payment = get_object_or_404(Payment, id=payment_id)
+    
+    if request.method == 'POST':
+        payment.archived = False
+        payment.save()
+        
+        if request.headers.get('HX-Request'):
+            payments = Payment.objects.select_related('trainee__profile__user').filter(archived=True).order_by('-payment_date')
+            response = render(request, 'admin/payments/archived_list_partial.html', {'payments': payments})
+            response['HX-Trigger'] = json.dumps({
+                'showToast': {'message': 'Payment has been restored.', 'type': 'success'}
+            })
+            return response
+        
+        messages.success(request, 'Payment has been restored.')
+        return redirect('admin_archived_payments')
+    
+    return redirect('admin_archived_payments')
 
 
 @admin_required
@@ -1899,3 +2393,265 @@ def belt_rank_promotion_history(request):
         return render(request, 'admin/belt_promotion/history_partial.html', context)
     
     return render(request, 'admin/belt_promotion/history.html', context)
+
+
+# ============================================================================
+# EVALUATION VIEWS
+# ============================================================================
+
+@admin_required
+def evaluation_list(request):
+    """
+    List all trainee evaluations with filtering options.
+    """
+    from core.models import TraineeEvaluation
+    
+    evaluations = TraineeEvaluation.objects.select_related(
+        'trainee__profile__user',
+        'evaluator'
+    ).filter(archived=False)
+    
+    # Apply search filter
+    search = request.GET.get('search', '').strip()
+    if search:
+        evaluations = evaluations.filter(
+            Q(trainee__profile__user__first_name__icontains=search) |
+            Q(trainee__profile__user__last_name__icontains=search) |
+            Q(trainee__profile__user__username__icontains=search)
+        )
+    
+    # Apply status filter
+    status_filter = request.GET.get('status_filter', '').strip()
+    if status_filter:
+        evaluations = evaluations.filter(status=status_filter)
+    
+    # Apply rating filter
+    rating_filter = request.GET.get('rating_filter', '').strip()
+    if rating_filter:
+        evaluations = evaluations.filter(overall_rating=int(rating_filter))
+    
+    # Order by evaluation date (most recent first)
+    evaluations = evaluations.order_by('-evaluated_at')
+    
+    context = {
+        'evaluations': evaluations,
+        'search_query': search,
+        'status_filter': status_filter,
+        'rating_filter': rating_filter,
+        'status_choices': [('pending', 'Pending'), ('completed', 'Completed')],
+        'rating_choices': [(1, 'Poor'), (2, 'Fair'), (3, 'Good'), (4, 'Very Good'), (5, 'Excellent')],
+    }
+    
+    # Return partial for HTMX requests
+    if request.headers.get('HX-Request'):
+        return render(request, 'admin/evaluations/list_partial.html', context)
+    
+    return render(request, 'admin/evaluations/list.html', context)
+
+
+@admin_required
+def evaluation_list_partial(request):
+    """
+    Partial view for HTMX evaluation list updates.
+    """
+    from core.models import TraineeEvaluation
+    
+    evaluations = TraineeEvaluation.objects.select_related(
+        'trainee__profile__user',
+        'evaluator'
+    ).filter(archived=False)
+    
+    # Apply search filter
+    search = request.GET.get('search', '').strip()
+    if search:
+        evaluations = evaluations.filter(
+            Q(trainee__profile__user__first_name__icontains=search) |
+            Q(trainee__profile__user__last_name__icontains=search) |
+            Q(trainee__profile__user__username__icontains=search)
+        )
+    
+    # Apply status filter
+    status_filter = request.GET.get('status_filter', '').strip()
+    if status_filter:
+        evaluations = evaluations.filter(status=status_filter)
+    
+    # Apply rating filter
+    rating_filter = request.GET.get('rating_filter', '').strip()
+    if rating_filter:
+        evaluations = evaluations.filter(overall_rating=int(rating_filter))
+    
+    # Order by evaluation date
+    evaluations = evaluations.order_by('-evaluated_at')
+    
+    return render(request, 'admin/evaluations/list_partial.html', {'evaluations': evaluations})
+
+
+@admin_required
+def evaluation_add(request):
+    """
+    Create a new trainee evaluation.
+    """
+    from core.models import TraineeEvaluation
+    
+    if request.method == 'POST':
+        trainee_id = request.POST.get('trainee', '').strip()
+        technique = request.POST.get('technique', '3').strip()
+        speed = request.POST.get('speed', '3').strip()
+        strength = request.POST.get('strength', '3').strip()
+        flexibility = request.POST.get('flexibility', '3').strip()
+        discipline = request.POST.get('discipline', '3').strip()
+        spirit = request.POST.get('spirit', '3').strip()
+        overall_rating = request.POST.get('overall_rating', '3').strip()
+        comments = request.POST.get('comments', '').strip()
+        strengths = request.POST.get('strengths', '').strip()
+        areas_for_improvement = request.POST.get('areas_for_improvement', '').strip()
+        recommendations = request.POST.get('recommendations', '').strip()
+        next_evaluation_date = request.POST.get('next_evaluation_date', '').strip()
+        
+        # Validation
+        errors = {}
+        if not trainee_id:
+            errors['trainee'] = 'Trainee is required'
+        
+        if errors:
+            trainees = Trainee.objects.filter(status='active').select_related('profile__user').order_by('profile__user__first_name')
+            form_data = {
+                'trainee': {'value': trainee_id, 'errors': [errors.get('trainee')] if errors.get('trainee') else []},
+            }
+            return render(request, 'admin/evaluations/form.html', {'form': form_data, 'trainees': trainees, 'rating_choices': TraineeEvaluation.RATING_CHOICES})
+        
+        # Create evaluation
+        evaluation = TraineeEvaluation.objects.create(
+            trainee_id=trainee_id,
+            evaluator=request.user,
+            technique=int(technique),
+            speed=int(speed),
+            strength=int(strength),
+            flexibility=int(flexibility),
+            discipline=int(discipline),
+            spirit=int(spirit),
+            overall_rating=int(overall_rating),
+            comments=comments,
+            strengths=strengths,
+            areas_for_improvement=areas_for_improvement,
+            recommendations=recommendations,
+            next_evaluation_date=next_evaluation_date if next_evaluation_date else None,
+            status='completed'
+        )
+        
+        messages.success(request, 'Evaluation has been created successfully.')
+        
+        if request.headers.get('HX-Request'):
+            response = HttpResponse()
+            response['HX-Redirect'] = '/admin/evaluations/'
+            return response
+        
+        return redirect('admin_evaluations')
+    
+    # GET request - show form
+    trainees = Trainee.objects.filter(status='active').select_related('profile__user').order_by('profile__user__first_name')
+    return render(request, 'admin/evaluations/form.html', {
+        'trainees': trainees,
+        'rating_choices': TraineeEvaluation.RATING_CHOICES,
+        'is_add': True
+    })
+
+
+@admin_required
+def evaluation_edit(request, evaluation_id):
+    """
+    Edit an existing trainee evaluation.
+    """
+    from core.models import TraineeEvaluation
+    
+    evaluation = get_object_or_404(TraineeEvaluation.objects.select_related('trainee__profile__user'), id=evaluation_id)
+    
+    if request.method == 'POST':
+        technique = request.POST.get('technique', str(evaluation.technique)).strip()
+        speed = request.POST.get('speed', str(evaluation.speed)).strip()
+        strength = request.POST.get('strength', str(evaluation.strength)).strip()
+        flexibility = request.POST.get('flexibility', str(evaluation.flexibility)).strip()
+        discipline = request.POST.get('discipline', str(evaluation.discipline)).strip()
+        spirit = request.POST.get('spirit', str(evaluation.spirit)).strip()
+        overall_rating = request.POST.get('overall_rating', str(evaluation.overall_rating)).strip()
+        comments = request.POST.get('comments', evaluation.comments).strip()
+        strengths = request.POST.get('strengths', evaluation.strengths).strip()
+        areas_for_improvement = request.POST.get('areas_for_improvement', evaluation.areas_for_improvement).strip()
+        recommendations = request.POST.get('recommendations', evaluation.recommendations).strip()
+        next_evaluation_date = request.POST.get('next_evaluation_date', '').strip()
+        
+        # Update evaluation
+        evaluation.technique = int(technique)
+        evaluation.speed = int(speed)
+        evaluation.strength = int(strength)
+        evaluation.flexibility = int(flexibility)
+        evaluation.discipline = int(discipline)
+        evaluation.spirit = int(spirit)
+        evaluation.overall_rating = int(overall_rating)
+        evaluation.comments = comments
+        evaluation.strengths = strengths
+        evaluation.areas_for_improvement = areas_for_improvement
+        evaluation.recommendations = recommendations
+        if next_evaluation_date:
+            evaluation.next_evaluation_date = next_evaluation_date
+        evaluation.save()
+        
+        messages.success(request, 'Evaluation has been updated successfully.')
+        
+        if request.headers.get('HX-Request'):
+            response = HttpResponse()
+            response['HX-Redirect'] = '/admin/evaluations/'
+            return response
+        
+        return redirect('admin_evaluations')
+    
+    # GET request - show form
+    return render(request, 'admin/evaluations/form.html', {
+        'evaluation': evaluation,
+        'trainees': [evaluation.trainee],
+        'rating_choices': TraineeEvaluation.RATING_CHOICES,
+        'is_edit': True
+    })
+
+
+@admin_required
+def evaluation_delete(request, evaluation_id):
+    """
+    Delete (archive) an evaluation.
+    """
+    from core.models import TraineeEvaluation
+    
+    evaluation = get_object_or_404(TraineeEvaluation, id=evaluation_id)
+    
+    if request.method == 'POST':
+        evaluation.archived = True
+        evaluation.save()
+        messages.success(request, 'Evaluation has been archived.')
+        
+        if request.headers.get('HX-Request'):
+            response = HttpResponse()
+            response['HX-Redirect'] = '/admin/evaluations/'
+            return response
+        
+        return redirect('admin_evaluations')
+    
+    # GET request - show confirmation
+    return render(request, 'admin/evaluations/confirm_delete.html', {'evaluation': evaluation})
+
+
+@admin_required
+def trainee_evaluations(request, trainee_id):
+    """
+    View all evaluations for a specific trainee.
+    """
+    from core.models import TraineeEvaluation
+    
+    trainee = get_object_or_404(Trainee.objects.select_related('profile__user'), id=trainee_id)
+    evaluations = TraineeEvaluation.objects.filter(trainee=trainee, archived=False).order_by('-evaluated_at')
+    
+    context = {
+        'trainee': trainee,
+        'evaluations': evaluations,
+    }
+    
+    return render(request, 'admin/evaluations/trainee_detail.html', context)
